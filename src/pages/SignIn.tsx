@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import ResendConfirmation from '@/components/auth/ResendConfirmation';
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -9,16 +10,19 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [unconfirmed, setUnconfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setUnconfirmed(false);
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const result = await signIn(email, password);
     setLoading(false);
-    if (error) {
-      setError(error);
+    if (result.error) {
+      setError(result.error);
+      setUnconfirmed(result.unconfirmed);
     } else {
       navigate('/dashboard');
     }
@@ -45,6 +49,8 @@ export default function SignIn() {
               <span>{error}</span>
             </div>
           )}
+
+          {unconfirmed && <div className="mb-4"><ResendConfirmation email={email} /></div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

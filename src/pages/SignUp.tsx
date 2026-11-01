@@ -1,14 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, AlertCircle, Loader2, User, Phone, Building2 } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, User, Phone, Building2, MailCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import ResendConfirmation from '@/components/auth/ResendConfirmation';
 import { philippineRegions } from '@/lib/utils';
 
 export default function SignUp() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,39 +46,24 @@ export default function SignUp() {
     }
     setLoading(true);
 
-    const { error: signUpError } = await signUp(email, password);
-    if (signUpError) {
-      setError(signUpError);
-      setLoading(false);
-      return;
-    }
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user?.id;
-    if (!userId) {
-      setError('Account created but session could not be established. Please sign in.');
-      setLoading(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from('contractors').insert({
-      user_id: userId,
+    const { error: signUpError, needsConfirmation } = await signUp(email, password, {
       company_name: companyName,
       contact_person: contactPerson,
       phone,
-      email,
       region,
       address,
       pcab_license_no: pcabLicense,
     });
-
-    if (insertError) {
-      setError('Account created but profile setup failed: ' + insertError.message);
-      setLoading(false);
+    setLoading(false);
+    if (signUpError) {
+      setError(signUpError);
       return;
     }
 
-    setLoading(false);
+    if (needsConfirmation) {
+      setPendingEmail(email);
+      return;
+    }
     navigate('/dashboard');
   };
 
@@ -103,6 +89,22 @@ export default function SignUp() {
           <div className={`h-1.5 flex-1 rounded-full ${step >= 2 ? 'bg-primary-600' : 'bg-neutral-200'}`} />
         </div>
 
+        {pendingEmail ? (
+          <div className="card p-6 text-center space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center mx-auto">
+              <MailCheck size={24} className="text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-neutral-900">Check your inbox</h2>
+            <p className="text-sm text-neutral-500">
+              We sent a confirmation link to <span className="font-semibold text-neutral-900">{pendingEmail}</span>.
+              Click the link to activate your account, then sign in to continue your company registration.
+            </p>
+            <ResendConfirmation email={pendingEmail} />
+            <Link to="/signin" className="btn-primary w-full !py-3 block">
+              Go to sign in
+            </Link>
+          </div>
+        ) : (
         <div className="card p-6">
           {error && (
             <div className="mb-4 flex items-start gap-2 rounded-lg bg-error-50 border border-error-200 px-4 py-3 text-sm text-error-700 animate-slide-down">
@@ -280,6 +282,7 @@ export default function SignUp() {
             </form>
           )}
         </div>
+        )}
 
         <p className="text-center text-sm text-neutral-500 mt-5">
           Already have an account?{' '}

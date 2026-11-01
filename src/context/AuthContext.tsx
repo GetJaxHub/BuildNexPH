@@ -3,13 +3,33 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Contractor } from '@/types';
 
+export interface CompanySignupProfile {
+  company_name: string;
+  contact_person: string;
+  phone: string;
+  region: string;
+  address: string;
+  pcab_license_no: string;
+}
+
+export const UNCONFIRMED_EMAIL_MESSAGE =
+  'Your email address has not been confirmed yet. Check your inbox for the confirmation link.';
+
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
   contractor: Contractor | null;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    profile: CompanySignupProfile,
+  ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null; unconfirmed: boolean }>;
+  resendConfirmation: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshContractor: () => Promise<void>;
 }
@@ -61,13 +81,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error: error?.message ?? null };
+  const signUp = async (email: string, password: string, profile: CompanySignupProfile) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: profile,
+        emailRedirectTo: `${window.location.origin}/signin`,
+      },
+    });
+    if (error) return { error: error.message, needsConfirmation: false };
+    return { error: null, needsConfirmation: !data.session };
   };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) return { error: null, unconfirmed: false };
+    const unconfirmed =
+      error.code === 'email_not_confirmed' || error.message === 'Email not confirmed';
+    return { error: unconfirmed ? UNCONFIRMED_EMAIL_MESSAGE : error.message, unconfirmed };
+  };
+
+  const resendConfirmation = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/signin` },
+    });
     return { error: error?.message ?? null };
   };
 
@@ -84,7 +124,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, contractor, loading, signUp, signIn, signOut, refreshContractor }}
+      value={{
+        session,
+        user,
+        contractor,
+        loading,
+        signUp,
+        signIn,
+        resendConfirmation,
+        signOut,
+        refreshContractor,
+      }}
     >
       {children}
     </AuthContext.Provider>
