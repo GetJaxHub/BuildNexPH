@@ -1,16 +1,23 @@
 import { useState, type FormEvent } from 'react';
-import { Loader2, AlertCircle, Save, CheckCircle2, Lock } from 'lucide-react';
+import { Loader2, AlertCircle, Save, CheckCircle2, Lock, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { philippineRegions } from '@/lib/utils';
 import AccreditationBadge from '@/components/AccreditationBadge';
 import FileUpload from '@/components/FileUpload';
-import type { Contractor } from '@/types';
+import type { Contractor, VerificationStatus } from '@/types';
+import VerificationBadge from '@/components/admin/VerificationBadge';
 
 interface Props {
   contractor: Contractor | null;
   onSaved: () => Promise<void>;
 }
+
+const VERIFICATION_COPY: Record<VerificationStatus, string> = {
+  pending: 'Your company is awaiting review. An administrator will check your profile and documents.',
+  approved: 'Your company has been verified by BuildNexPH.',
+  rejected: 'Your verification was not approved. See the reviewer notes below.',
+};
 
 export default function ProfileTab({ contractor, onSaved }: Props) {
   const { user } = useAuth();
@@ -110,6 +117,26 @@ export default function ProfileTab({ contractor, onSaved }: Props) {
       {saved && (
         <div className="flex items-center gap-2 rounded-lg bg-success-50 border border-success-200 px-4 py-3 text-sm text-success-700 animate-slide-down">
           <CheckCircle2 size={16} /> Profile saved successfully.
+        </div>
+      )}
+
+      {contractor && (
+        <div className="card p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
+              <ShieldCheck size={18} className="text-primary-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-neutral-900">Verification status</p>
+                <p className="text-xs text-neutral-500 mt-0.5">{VERIFICATION_COPY[contractor.verification_status]}</p>
+              </div>
+            </div>
+            <VerificationBadge status={contractor.verification_status} />
+          </div>
+          {contractor.verification_notes && (
+            <div className="mt-4 rounded-lg bg-neutral-50 border border-neutral-200 px-4 py-3 text-sm text-neutral-700">
+              <strong>Reviewer notes:</strong> {contractor.verification_notes}
+            </div>
+          )}
         </div>
       )}
 

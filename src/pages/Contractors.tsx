@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, Building2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { recordSearch } from '@/lib/analytics';
 import type { Contractor } from '@/types';
 import { accreditationOrder, philippineRegions } from '@/lib/utils';
 import ContractorCard from '@/components/ContractorCard';
@@ -74,6 +75,10 @@ export default function Contractors() {
   useEffect(() => {
     fetchContractors();
   }, [fetchContractors]);
+
+  useEffect(() => {
+    if (q) recordSearch('contractor', q);
+  }, [q]);
 
   const updateParam = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams);

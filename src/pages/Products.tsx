@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, Package, ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { recordSearch } from '@/lib/analytics';
 import type { Product, Category } from '@/types';
 import { accreditationOrder } from '@/lib/utils';
 import ProductCard from '@/components/ProductCard';
@@ -62,6 +63,10 @@ export default function Products() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    if (q) recordSearch('product', q);
+  }, [q]);
 
   const updateParam = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams);

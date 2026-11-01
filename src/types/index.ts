@@ -1,5 +1,7 @@
 export type AccreditationLevel = 'AAA' | 'AA' | 'A' | 'B' | 'C' | 'Unranked';
 
+export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Category {
   id: string;
   name: string;
@@ -24,6 +26,9 @@ export interface Contractor {
   logo_url: string;
   banner_url: string;
   verified: boolean;
+  verification_status: VerificationStatus;
+  verification_notes: string;
+  reviewed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -74,4 +79,20 @@ export interface ContractorWithRelations extends Contractor {
   products?: Product[];
   documents?: Document[];
   projects?: Project[];
+}
+
+export interface AdminAnalytics {
+  totals: {
+    product_searches_logged_in: number;
+    product_searches_anonymous: number;
+    contractor_searches_logged_in: number;
+    contractor_searches_anonymous: number;
+    profile_opens_logged_in: number;
+    profile_opens_anonymous: number;
+    pending_verifications: number;
+    approved_companies: number;
+    rejected_companies: number;
+  };
+  top_equipment: { term: string; total: number; logged_in: number; anonymous: number }[];
+  top_companies: { id: string; company_name: string; total: number; logged_in: number; anonymous: number }[];
 }

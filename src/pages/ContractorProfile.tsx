@@ -7,6 +7,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { Contractor, Product, Document } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { recordProfileView } from '@/lib/analytics';
 import AccreditationBadge from '@/components/AccreditationBadge';
 import ProductCard from '@/components/ProductCard';
 
@@ -35,6 +36,7 @@ export default function ContractorProfile() {
       }
 
       setContractor(conRes.data as Contractor);
+      recordProfileView(id);
       setProducts((prodRes.data as unknown as Product[]) ?? []);
       setDocuments((docRes.data as Document[]) ?? []);
       setLoading(false);
