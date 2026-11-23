@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { AlertCircle, Briefcase, Building2, Globe, Loader2, MapPin, MessageSquare, Phone, ShoppingCart, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import BuyerForm from '@/components/auth/BuyerForm';
+import AccountSettingsTab from '@/components/dashboard/AccountSettingsTab';
 import { cleanBuyer, emptyBuyer, validateBuyer } from '@/lib/buyer';
 
 /** Buyer account: details + edit. Contractors use the Dashboard instead. */
@@ -92,6 +93,7 @@ export default function Account() {
           <p className="text-xs text-neutral-500">Verified and accredited</p>
         </Link>
       </div>
+      <div className="mt-8"><AccountSettingsTab /></div>
     </div>
   );
 }

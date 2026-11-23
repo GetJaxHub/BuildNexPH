@@ -58,24 +58,15 @@ export default function AccountSettingsTab() {
     setDeleteStep('deleting');
     setError(null);
 
-    try {
-      const contractorId = (await supabase.from('contractors').select('id').eq('user_id', user.id).maybeSingle()).data?.id;
-
-      if (contractorId) {
-        await supabase.from('products').delete().eq('contractor_id', contractorId);
-        await supabase.from('documents').delete().eq('contractor_id', contractorId);
-        await supabase.from('contractors').delete().eq('id', contractorId);
-      }
-
-      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
-      if (authError) {
-        await signOut();
-      }
-      setDeleteStep('done');
-    } catch {
-      setError('Account deletion failed. Please contact support at [privacy@buildnex.ph].');
+    // Deletes the auth user server-side; profile, products, projects, documents and messages cascade.
+    const { error: delError } = await supabase.rpc('delete_my_account');
+    if (delError) {
+      setError('Account deletion failed: ' + delError.message);
       setDeleteStep('confirm');
+      return;
     }
+    await signOut();
+    setDeleteStep('done');
   };
 
   if (deleteStep === 'done') {
