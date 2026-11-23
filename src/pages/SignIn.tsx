@@ -83,7 +83,10 @@ export default function SignIn() {
             </div>
 
             <div>
-              <label className="label">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Password</label>
+                <Link to="/forgot-password" className="text-xs font-semibold text-primary-600 hover:text-primary-700 mb-1.5">Forgot password?</Link>
+              </div>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                 <input

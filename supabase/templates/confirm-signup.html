@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Confirm your BuildNexPH account</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#171717;">
+  <div style="display:none;max-height:0;overflow:hidden;">{{ if eq .Data.account_type "buyer" }}One tap to confirm your email and start messaging verified contractors and suppliers.{{ else }}One tap to confirm your email and start building your company profile.{{ end }}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+        <tr><td align="center" style="padding-bottom:20px;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="padding-right:10px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="40" height="40" align="center" valign="middle" style="width:40px;height:40px;background:#0a4db5;background-image:linear-gradient(135deg,#2480ec,#0a4db5);border-radius:10px;color:#ffffff;font-size:22px;font-weight:800;line-height:40px;font-family:Inter,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">B</td></tr></table></td>
+            <td style="text-align:left;">
+              <div style="font-size:20px;font-weight:800;line-height:22px;color:#171717;">BuildNex<span style="color:#2480ec;">PH</span></div>
+              <div style="font-size:12px;color:#737373;line-height:16px;">by Mamba AutoMize</div>
+            </td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="background:#ffffff;border:1px solid #e5e5e5;border-radius:16px;padding:28px 24px;">
+          <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;color:#2480ec;text-transform:uppercase;">Almost there</div>
+          <h1 style="margin:8px 0 12px;font-size:24px;line-height:30px;font-weight:800;color:#171717;">
+            Hi {{ if .Data.full_name }}{{ .Data.full_name }}{{ else if .Data.contact_person }}{{ .Data.contact_person }}{{ else }}there{{ end }}, confirm your email
+          </h1>
+          <p style="margin:0 0 20px;font-size:15px;line-height:23px;color:#404040;">
+            {{ if eq .Data.account_type "buyer" }}Tap the button below to confirm <strong>{{ .Email }}</strong> and finish setting up your BuildNexPH buyer account. Then message verified contractors and suppliers about the materials and projects you need.{{ else }}Tap the button below to confirm <strong>{{ .Email }}</strong> and finish registering {{ if .Data.company_name }}<strong>{{ .Data.company_name }}</strong>{{ else }}your company{{ end }} on BuildNexPH. Then add your products, projects and licenses so buyers can find you.{{ end }}
+          </p>
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:12px;background:#2480ec;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Confirm my email</a>
+          </td></tr></table>
+          <p style="margin:20px 0 0;font-size:13px;line-height:20px;color:#737373;">
+            Button not working? Copy this link into your browser:<br>
+            <a href="{{ .ConfirmationURL }}" style="color:#2480ec;word-break:break-all;">{{ .ConfirmationURL }}</a>
+          </p>
+        </td></tr>
+        <tr><td style="padding:20px 8px 0;text-align:center;font-size:12px;line-height:18px;color:#737373;">
+          You're receiving this because this email was used to sign up at BuildNexPH. If that wasn't you, you can ignore this email.
+          <br><br>
+          <a href="https://buildnexph.mambaautomize.com" style="color:#404040;font-weight:600;text-decoration:none;">BuildNexPH</a> &middot; Philippines' contractor marketplace
+          <br>
+          Powered by <a href="https://www.mambaautomize.com" style="color:#2480ec;font-weight:600;text-decoration:none;">Mamba AutoMize</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
