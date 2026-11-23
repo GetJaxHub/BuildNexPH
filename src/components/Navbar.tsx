@@ -1,10 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { LogOut, LayoutDashboard, Menu, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Menu, MessageSquare, UserRound, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
-  const { user, contractor, signOut } = useAuth();
+  const { user, accountType, signOut } = useAuth();
+  const home = accountType === 'buyer'
+    ? { path: '/account', label: 'My Account', Icon: UserRound }
+    : { path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard };
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -56,9 +59,13 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <Link to="/dashboard" className="btn-secondary !py-2">
-                  <LayoutDashboard size={16} />
-                  Dashboard
+                <Link to="/messages" className="btn-ghost !py-2">
+                  <MessageSquare size={16} />
+                  Messages
+                </Link>
+                <Link to={home.path} className="btn-secondary !py-2">
+                  <home.Icon size={16} />
+                  {home.label}
                 </Link>
                 <button onClick={handleSignOut} className="btn-ghost !py-2">
                   <LogOut size={16} />
@@ -71,7 +78,7 @@ export default function Navbar() {
                   Sign In
                 </Link>
                 <Link to="/signup" className="btn-primary !py-2">
-                  Get Started
+                  Register
                 </Link>
               </>
             )}
@@ -107,11 +114,18 @@ export default function Navbar() {
               {user ? (
                 <>
                   <Link
-                    to="/dashboard"
+                    to="/messages"
                     onClick={() => setMobileOpen(false)}
                     className="block px-3 py-2 rounded-lg text-sm font-medium text-neutral-600 hover:bg-neutral-100"
                   >
-                    Dashboard
+                    Messages
+                  </Link>
+                  <Link
+                    to={home.path}
+                    onClick={() => setMobileOpen(false)}
+                    className="block px-3 py-2 rounded-lg text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+                  >
+                    {home.label}
                   </Link>
                   <button
                     onClick={() => {
@@ -137,7 +151,7 @@ export default function Navbar() {
                     onClick={() => setMobileOpen(false)}
                     className="block px-3 py-2 rounded-lg text-sm font-medium text-primary-600 hover:bg-primary-50"
                   >
-                    Get Started
+                    Register
                   </Link>
                 </>
               )}

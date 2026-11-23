@@ -1,13 +1,19 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, Loader2, User, Phone, Building2, MailCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ResendConfirmation from '@/components/auth/ResendConfirmation';
 import { philippineRegions } from '@/lib/utils';
+import RoleSwitch from '@/components/auth/RoleSwitch';
+import BuyerForm from '@/components/auth/BuyerForm';
+import { cleanBuyer, emptyBuyer, validateBuyer, type AccountType } from '@/lib/buyer';
 
 export default function SignUp() {
-  const { signUp } = useAuth();
+  const { signUp, signUpBuyer } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const [role, setRole] = useState<AccountType>(params.get('as') === 'buyer' ? 'buyer' : 'contractor');
+  const [buyer, setBuyer] = useState(emptyBuyer);
   const [step, setStep] = useState(1);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [email, setEmail] = useState('');
@@ -44,16 +50,23 @@ export default function SignUp() {
       setError('You must agree to the Terms of Service and Privacy Policy to create an account.');
       return;
     }
+    const buyerError = role === 'buyer' ? validateBuyer(buyer) : null;
+    if (buyerError) {
+      setError(buyerError);
+      return;
+    }
     setLoading(true);
 
-    const { error: signUpError, needsConfirmation } = await signUp(email, password, {
-      company_name: companyName,
-      contact_person: contactPerson,
-      phone,
-      region,
-      address,
-      pcab_license_no: pcabLicense,
-    });
+    const { error: signUpError, needsConfirmation } = role === 'buyer'
+      ? await signUpBuyer(email, password, cleanBuyer(buyer))
+      : await signUp(email, password, {
+        company_name: companyName,
+        contact_person: contactPerson,
+        phone,
+        region,
+        address,
+        pcab_license_no: pcabLicense,
+      });
     setLoading(false);
     if (signUpError) {
       setError(signUpError);
@@ -64,7 +77,7 @@ export default function SignUp() {
       setPendingEmail(email);
       return;
     }
-    navigate('/dashboard');
+    navigate(role === 'buyer' ? '/account' : '/dashboard');
   };
 
   return (
@@ -77,11 +90,17 @@ export default function SignUp() {
               BuildNex<span className="text-primary-600">PH</span>
             </span>
           </Link>
-          <h1 className="text-2xl font-bold text-neutral-900">Register Your Company</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">{role === 'buyer' ? 'Create a Buyer Account' : 'Register Your Company'}</h1>
           <p className="text-neutral-500 mt-1 text-sm">
-            Step {step} of 2 — {step === 1 ? 'Account credentials' : 'Company details'}
+            Step {step} of 2 — {step === 1 ? 'Account credentials' : role === 'buyer' ? 'Your details' : 'Company details'}
           </p>
         </div>
+
+        {!pendingEmail && (
+          <div className="mb-4">
+            <RoleSwitch value={role} onChange={(r) => { setRole(r); setError(null); }} />
+          </div>
+        )}
 
         {/* Progress indicator */}
         <div className="flex items-center gap-2 mb-6">
@@ -168,6 +187,7 @@ export default function SignUp() {
 
           {step === 2 && (
             <form onSubmit={handleFinalSubmit} className="space-y-4">
+              {role === 'buyer' ? <BuyerForm value={buyer} onChange={setBuyer} /> : (<>
               <div>
                 <label className="label">Company Name</label>
                 <div className="relative">
@@ -254,6 +274,7 @@ export default function SignUp() {
                   Philippine Contractors Accreditation Board license number, if available.
                 </p>
               </div>
+              </>)}
 
               <div className="flex items-start gap-2 pt-2">
                 <input
@@ -286,7 +307,7 @@ export default function SignUp() {
 
         <p className="text-center text-sm text-neutral-500 mt-5">
           Already have an account?{' '}
-          <Link to="/signin" className="text-primary-600 font-semibold hover:text-primary-700">
+          <Link to={`/signin?as=${role}`} className="text-primary-600 font-semibold hover:text-primary-700">
             Sign in
           </Link>
         </p>

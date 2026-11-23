@@ -1,12 +1,22 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ResendConfirmation from '@/components/auth/ResendConfirmation';
+import RoleSwitch from '@/components/auth/RoleSwitch';
+import type { AccountType } from '@/lib/buyer';
+
+const copy = {
+  contractor: { sub: 'Manage your company profile, products, projects, licenses and buyer messages', register: 'Register your company', placeholder: 'company@email.com' },
+  buyer: { sub: 'Message verified contractors and suppliers, and keep your details on file', register: 'Create a buyer account', placeholder: 'you@email.com' },
+};
 
 export default function SignIn() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const [role, setRole] = useState<AccountType>(params.get('as') === 'buyer' ? 'buyer' : 'contractor');
+  const t = copy[role];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -18,13 +28,13 @@ export default function SignIn() {
     setError(null);
     setUnconfirmed(false);
     setLoading(true);
-    const result = await signIn(email, password);
+    const result = await signIn(email, password, role);
     setLoading(false);
     if (result.error) {
       setError(result.error);
       setUnconfirmed(result.unconfirmed);
     } else {
-      navigate('/dashboard');
+      navigate(params.get('next') || (role === 'buyer' ? '/account' : '/dashboard'));
     }
   };
 
@@ -39,7 +49,11 @@ export default function SignIn() {
             </span>
           </Link>
           <h1 className="text-2xl font-bold text-neutral-900">Welcome back</h1>
-          <p className="text-neutral-500 mt-1 text-sm">Sign in to your contractor account</p>
+          <p className="text-neutral-500 mt-1 text-sm">{t.sub}</p>
+        </div>
+
+        <div className="mb-4">
+          <RoleSwitch value={role} onChange={(r) => { setRole(r); setError(null); setUnconfirmed(false); }} />
         </div>
 
         <div className="card p-6">
@@ -63,7 +77,7 @@ export default function SignIn() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="input pl-10"
-                  placeholder="company@email.com"
+                  placeholder={t.placeholder}
                 />
               </div>
             </div>
@@ -84,14 +98,14 @@ export default function SignIn() {
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full !py-3">
-              {loading ? <Loader2 size={18} className="animate-spin" /> : 'Sign In'}
+              {loading ? <Loader2 size={18} className="animate-spin" /> : role === 'buyer' ? 'Sign In as Buyer' : 'Sign In as Contractor'}
             </button>
           </form>
 
           <p className="text-center text-sm text-neutral-500 mt-5">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-primary-600 font-semibold hover:text-primary-700">
-              Register your company
+            <Link to={`/signup?as=${role}`} className="text-primary-600 font-semibold hover:text-primary-700">
+              {t.register}
             </Link>
           </p>
         </div>

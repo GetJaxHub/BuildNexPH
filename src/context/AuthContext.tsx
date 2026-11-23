@@ -2,6 +2,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Contractor } from '@/types';
+import type { AccountType, BuyerProfile } from '@/lib/buyer';
+
+const accountTypeOf = (s: Session | null): AccountType | null =>
+  !s ? null : s.user.user_metadata?.account_type === 'buyer' ? 'buyer' : 'contractor';
 
 export interface CompanySignupProfile {
   company_name: string;
@@ -18,6 +22,8 @@ export const UNCONFIRMED_EMAIL_MESSAGE =
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
+  accountType: AccountType | null;
+  buyer: BuyerProfile | null;
   contractor: Contractor | null;
   loading: boolean;
   signUp: (
@@ -28,7 +34,14 @@ interface AuthContextValue {
   signIn: (
     email: string,
     password: string,
+    as: AccountType,
   ) => Promise<{ error: string | null; unconfirmed: boolean }>;
+  signUpBuyer: (
+    email: string,
+    password: string,
+    profile: BuyerProfile,
+  ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  updateBuyer: (profile: BuyerProfile) => Promise<{ error: string | null }>;
   resendConfirmation: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshContractor: () => Promise<void>;
@@ -94,12 +107,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null, needsConfirmation: !data.session };
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error) return { error: null, unconfirmed: false };
+  const signIn = async (email: string, password: string, as: AccountType) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) {
+      const actual = accountTypeOf(data.session);
+      if (actual === as) return { error: null, unconfirmed: false };
+      await supabase.auth.signOut();
+      return {
+        error: actual === 'buyer'
+          ? 'This is a buyer account. Switch to "For Buyers" to sign in.'
+          : 'This is a contractor account. Switch to "For Contractors" to sign in.',
+        unconfirmed: false,
+      };
+    }
     const unconfirmed =
       error.code === 'email_not_confirmed' || error.message === 'Email not confirmed';
     return { error: unconfirmed ? UNCONFIRMED_EMAIL_MESSAGE : error.message, unconfirmed };
+  };
+
+  const signUpBuyer = async (email: string, password: string, profile: BuyerProfile) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { ...profile, account_type: 'buyer' },
+        emailRedirectTo: `${window.location.origin}/signin?as=buyer`,
+      },
+    });
+    if (error) return { error: error.message, needsConfirmation: false };
+    return { error: null, needsConfirmation: !data.session };
+  };
+
+  const updateBuyer = async (profile: BuyerProfile) => {
+    const { data, error } = await supabase.auth.updateUser({ data: { ...profile, account_type: 'buyer' } });
+    if (!error && data.user) setUser(data.user);
+    return { error: error?.message ?? null };
   };
 
   const resendConfirmation = async (email: string) => {
@@ -122,15 +164,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const accountType = accountTypeOf(session);
+  const buyer = accountType === 'buyer' && user ? (user.user_metadata as BuyerProfile) : null;
+
   return (
     <AuthContext.Provider
       value={{
         session,
         user,
+        accountType,
+        buyer,
         contractor,
         loading,
         signUp,
         signIn,
+        signUpBuyer,
+        updateBuyer,
         resendConfirmation,
         signOut,
         refreshContractor,

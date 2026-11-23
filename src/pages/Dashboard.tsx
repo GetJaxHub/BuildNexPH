@@ -14,7 +14,7 @@ import AccountSettingsTab from '@/components/dashboard/AccountSettingsTab';
 type Tab = 'overview' | 'profile' | 'products' | 'projects' | 'documents' | 'settings';
 
 export default function Dashboard() {
-  const { user, contractor, loading, refreshContractor } = useAuth();
+  const { user, accountType, contractor, loading, refreshContractor } = useAuth();
   const [tab, setTab] = useState<Tab>('overview');
 
   if (loading) {
@@ -27,6 +27,10 @@ export default function Dashboard() {
 
   if (!user) {
     return <Navigate to="/signin" replace />;
+  }
+
+  if (accountType === 'buyer') {
+    return <Navigate to="/account" replace />;
   }
 
   const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [

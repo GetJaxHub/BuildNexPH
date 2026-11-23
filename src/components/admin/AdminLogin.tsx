@@ -16,7 +16,7 @@ export default function AdminLogin() {
     setError(null);
     setUnconfirmed(false);
     setLoading(true);
-    const result = await signIn(email, password);
+    const result = await signIn(email, password, 'contractor');
     setLoading(false);
     if (result.error) {
       setError(result.error);

@@ -20,6 +20,8 @@ const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
 const CookiePolicy = lazy(() => import('@/pages/CookiePolicy'));
 const Admin = lazy(() => import('@/pages/Admin'));
+const Account = lazy(() => import('@/pages/Account'));
+const Messages = lazy(() => import('@/pages/Messages'));
 
 function PageLoader() {
   return (
@@ -60,6 +62,9 @@ export default function App() {
                         <Route path="/contractors" element={<Contractors />} />
                         <Route path="/contractors/:id" element={<ContractorProfile />} />
                         <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/account" element={<Account />} />
+                        <Route path="/messages" element={<Messages />} />
+                        <Route path="/messages/:id" element={<Messages />} />
                         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                         <Route path="/terms-of-service" element={<TermsOfService />} />
                         <Route path="/cookie-policy" element={<CookiePolicy />} />

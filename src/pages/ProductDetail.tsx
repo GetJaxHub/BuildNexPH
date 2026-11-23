@@ -5,6 +5,7 @@ import {
   Package, Tag, Layers, ShieldCheck, FileText,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import MessageButton from '@/components/MessageButton';
 import type { Product, Contractor, Document } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import AccreditationBadge from '@/components/AccreditationBadge';
@@ -199,9 +200,10 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
+              <MessageButton contractorId={contractor.id} productId={product.id} className="mt-4" />
               <Link
                 to={`/contractors/${contractor.id}`}
-                className="btn-secondary w-full mt-4 !py-2"
+                className="btn-secondary w-full mt-2 !py-2"
               >
                 View Full Profile
               </Link>

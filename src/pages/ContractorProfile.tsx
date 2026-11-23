@@ -5,6 +5,7 @@ import {
   Package, ShieldCheck, FileText, Calendar, Award,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import MessageButton from '@/components/MessageButton';
 import type { Contractor, Product, Document } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { recordProfileView } from '@/lib/analytics';
@@ -114,6 +115,7 @@ export default function ContractorProfile() {
           {/* Contact card */}
           <div className="card p-5">
             <h3 className="font-semibold text-sm text-neutral-700 mb-3">Contact Information</h3>
+            <MessageButton contractorId={contractor.id} className="mb-4" />
             <div className="space-y-3 text-sm">
               {contractor.contact_person && (
                 <div className="flex items-center gap-2 text-neutral-600">
