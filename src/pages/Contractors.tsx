@@ -1,20 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X, Building2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { recordSearch } from '@/lib/analytics';
-import type { Contractor } from '@/types';
-import { accreditationOrder, philippineRegions } from '@/lib/utils';
+import { philippineRegions } from '@/lib/utils';
+import { fetchContractors, productCountOf, usePaged } from '@/lib/listings';
 import ContractorCard from '@/components/ContractorCard';
 
 const ACCREDITATION_FILTERS = ['AAA', 'AA', 'A', 'B', 'C', 'Unranked'] as const;
 
 export default function Contractors() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [productCounts, setProductCounts] = useState<Record<string, number>>({});
 
   const q = searchParams.get('q') ?? '';
   const accFilter = searchParams.get('accreditation') ?? '';
@@ -23,58 +19,10 @@ export default function Contractors() {
 
   const [searchInput, setSearchInput] = useState(q);
 
-  const fetchContractors = useCallback(async () => {
-    setLoading(true);
-    let query = supabase.from('contractors').select('*').order('created_at', { ascending: false });
-
-    if (q) {
-      query = query.or(`company_name.ilike.%${q}%,description.ilike.%${q}%,address.ilike.%${q}%`);
-    }
-
-    const { data } = await query;
-    let results = (data as Contractor[]) ?? [];
-
-    if (accFilter) {
-      results = results.filter((c) => c.accreditation_level === accFilter);
-    }
-    if (regionFilter) {
-      results = results.filter((c) => c.region === regionFilter);
-    }
-    if (verifiedOnly) {
-      results = results.filter((c) => c.verified);
-    }
-
-    results.sort((a, b) => accreditationOrder[b.accreditation_level] - accreditationOrder[a.accreditation_level]);
-    setContractors(results);
-
-    // Fetch product counts in a single query instead of N+1
-    if (results.length > 0) {
-      const contractorIds = results.map((c) => c.id);
-      const { data: prodData } = await supabase
-        .from('products')
-        .select('contractor_id')
-        .in('contractor_id', contractorIds);
-
-      const counts: Record<string, number> = {};
-      for (const c of results) {
-        counts[c.id] = 0;
-      }
-      if (prodData) {
-        for (const row of prodData as { contractor_id: string }[]) {
-          if (counts[row.contractor_id] !== undefined) {
-            counts[row.contractor_id]++;
-          }
-        }
-      }
-      setProductCounts(counts);
-    }
-
-    setLoading(false);
-  }, [q, accFilter, regionFilter, verifiedOnly]);
-
-  useEffect(() => {
-    fetchContractors();
-  }, [fetchContractors]);
+  const fetchPage = useCallback(
+    (from: number) => fetchContractors({ q, acc: accFilter, region: regionFilter, verified: verifiedOnly }, from),
+    [q, accFilter, regionFilter, verifiedOnly]);
+  const { rows: contractors, total, loading, loadingMore, hasMore, loadMore } = usePaged(fetchPage);
 
   useEffect(() => {
     if (q) recordSearch('contractor', q);
@@ -204,13 +152,20 @@ export default function Contractors() {
       ) : (
         <>
           <p className="text-sm text-neutral-500 mb-4">
-            {contractors.length} {contractors.length === 1 ? 'contractor' : 'contractors'} found
+            {total} {total === 1 ? 'contractor' : 'contractors'} found
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {contractors.map((c) => (
-              <ContractorCard key={c.id} contractor={c} productCount={productCounts[c.id] ?? 0} />
+              <ContractorCard key={c.id} contractor={c} productCount={productCountOf(c)} />
             ))}
           </div>
+          {hasMore && (
+            <div className="flex justify-center mt-8">
+              <button type="button" onClick={loadMore} disabled={loadingMore} className="btn-secondary !px-6 !py-2.5">
+                {loadingMore ? 'Loading…' : `Show more contractors`}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -4,36 +4,39 @@ import { ArrowLeft, Building2, Loader2, MessageSquare, Send, User } from 'lucide
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import {
-  getConversation, isUnread, listConversations, loadMessages, markRead, otherParty, sendMessage, timeLabel,
+  getConversation, inboxKey, isUnread, listConversations, loadMessages, markRead, otherParty, sendMessage, timeLabel,
   type Conversation, type Message,
 } from '@/lib/messaging';
 
 /** Inbox + chat. Two panes on desktop; on phones the list and the chat are separate screens (/messages, /messages/:id). */
 export default function Messages() {
   const { id } = useParams<{ id: string }>();
-  const { user, accountType, loading } = useAuth();
+  const { user, accountType, contractor, loading } = useAuth();
   const me = user?.id ?? '';
+  const key = inboxKey(accountType, me, contractor?.id);
+  const keyCol = key?.column;
+  const keyVal = key?.value;
   const [items, setItems] = useState<Conversation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!me) return;
-    const res = await listConversations();
+    if (!keyCol || !keyVal) { setItems([]); setListLoading(false); return; }
+    const res = await listConversations({ column: keyCol, value: keyVal });
     setItems(res.data);
     setError(res.error);
     setListLoading(false);
-  }, [me]);
+  }, [keyCol, keyVal]);
 
   useEffect(() => { load(); }, [load, id]);
 
   useEffect(() => {
-    if (!me) return;
-    const ch = supabase.channel(`inbox-web-${me}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => { load(); })
+    if (!keyCol || !keyVal) return;
+    const ch = supabase.channel(`inbox-web-${keyVal}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `${keyCol}=eq.${keyVal}` }, () => { load(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [me, load]);
+  }, [keyCol, keyVal, load]);
 
   if (loading) return <Center><Loader2 size={32} className="animate-spin text-primary-600" /></Center>;
   if (!user) return <Navigate to="/signin?next=/messages" replace />;

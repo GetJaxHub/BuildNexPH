@@ -1,19 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, Package, ImageIcon } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Package } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recordSearch } from '@/lib/analytics';
-import type { Product, Category } from '@/types';
-import { accreditationOrder } from '@/lib/utils';
+import type { Category } from '@/types';
+import { fetchProducts, usePaged } from '@/lib/listings';
 import ProductCard from '@/components/ProductCard';
 
 const ACCREDITATION_FILTERS = ['AAA', 'AA', 'A', 'B', 'C', 'Unranked'] as const;
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
   const q = searchParams.get('q') ?? '';
@@ -28,41 +26,10 @@ export default function Products() {
     });
   }, []);
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    let query = supabase
-      .from('products')
-      .select('*, contractor:contractors(*), category:categories(*)')
-      .order('created_at', { ascending: false });
-
-    if (q) {
-      query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%,brand.ilike.%${q}%`);
-    }
-
-    const { data } = await query;
-    let results = (data as unknown as Product[]) ?? [];
-
-    if (categorySlug) {
-      results = results.filter((p) => p.category?.slug === categorySlug);
-    }
-
-    if (accFilter) {
-      results = results.filter((p) => p.contractor?.accreditation_level === accFilter);
-    }
-
-    results.sort((a, b) => {
-      const acA = a.contractor ? accreditationOrder[a.contractor.accreditation_level] : 0;
-      const acB = b.contractor ? accreditationOrder[b.contractor.accreditation_level] : 0;
-      return acB - acA;
-    });
-
-    setProducts(results);
-    setLoading(false);
-  }, [q, categorySlug, accFilter]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  const fetchPage = useCallback(
+    (from: number) => fetchProducts({ q, categorySlug, acc: accFilter }, from),
+    [q, categorySlug, accFilter]);
+  const { rows: products, total, loading, loadingMore, hasMore, loadMore } = usePaged(fetchPage);
 
   useEffect(() => {
     if (q) recordSearch('product', q);
@@ -194,13 +161,20 @@ export default function Products() {
       ) : (
         <>
           <p className="text-sm text-neutral-500 mb-4">
-            {products.length} {products.length === 1 ? 'product' : 'products'} found
+            {total} {total === 1 ? 'product' : 'products'} found
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
+          {hasMore && (
+            <div className="flex justify-center mt-8">
+              <button type="button" onClick={loadMore} disabled={loadingMore} className="btn-secondary !px-6 !py-2.5">
+                {loadingMore ? 'Loading…' : `Show more products`}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

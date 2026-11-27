@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Search, Building2, ShieldCheck, Package, TrendingUp,
+  Search, Building2, ShieldCheck, TrendingUp,
   ArrowRight, Award, CheckCircle2, Layers,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { Product, Contractor, Category } from '@/types';
-import { accreditationOrder } from '@/lib/utils';
+import { fetchContractors, fetchStats } from '@/lib/listings';
 import ProductCard from '@/components/ProductCard';
 import ContractorCard from '@/components/ContractorCard';
 import AccreditationBadge from '@/components/AccreditationBadge';
@@ -21,25 +21,16 @@ export default function Home() {
 
   useEffect(() => {
     (async () => {
-      const [prodRes, conRes, catRes, prodCountRes] = await Promise.all([
+      const [prodRes, top, catRes, counts] = await Promise.all([
         supabase.from('products').select('*, contractor:contractors(*)').order('created_at', { ascending: false }).limit(8),
-        supabase.from('contractors').select('*').order('created_at', { ascending: false }),
+        fetchContractors({}, 0, 6),
         supabase.from('categories').select('*').order('name'),
-        supabase.from('products').select('id', { count: 'exact', head: true }),
+        fetchStats(),
       ]);
 
       if (prodRes.data) setFeaturedProducts(prodRes.data as unknown as Product[]);
-      if (conRes.data) {
-        const sorted = (conRes.data as Contractor[]).sort(
-          (a, b) => accreditationOrder[b.accreditation_level] - accreditationOrder[a.accreditation_level]
-        );
-        setTopContractors(sorted.slice(0, 6));
-        setStats({
-          products: prodCountRes.count ?? 0,
-          contractors: conRes.data.length,
-          verified: (conRes.data as Contractor[]).filter((c) => c.verified).length,
-        });
-      }
+      setTopContractors(top.rows);
+      setStats(counts);
       if (catRes.data) setCategories(catRes.data as Category[]);
     })();
   }, []);

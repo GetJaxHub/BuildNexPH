@@ -35,8 +35,20 @@ export const friendlyError = (e: PostgrestError | null): string | null =>
 
 const CONV_SELECT = '*, contractor:contractors(id, company_name, logo_url, user_id)';
 
-export async function listConversations() {
-  const { data, error } = await supabase.from('conversations').select(CONV_SELECT).order('last_message_at', { ascending: false });
+/**
+ * Which column marks "my" conversations: buyers by their user id, contractors by their company id.
+ * Filtering on it (instead of relying on the access rule alone) lets Postgres use the inbox indexes,
+ * and limits live updates to this user's own threads. null = no inbox yet (contractor without a profile).
+ */
+export type InboxKey = { column: 'buyer_user_id' | 'contractor_id'; value: string };
+export const inboxKey = (accountType: string | null, userId?: string, contractorId?: string | null): InboxKey | null =>
+  accountType === 'buyer'
+    ? (userId ? { column: 'buyer_user_id', value: userId } : null)
+    : (contractorId ? { column: 'contractor_id', value: contractorId } : null);
+
+export async function listConversations(key: InboxKey) {
+  const { data, error } = await supabase.from('conversations').select(CONV_SELECT)
+    .eq(key.column, key.value).order('last_message_at', { ascending: false }).limit(100);
   return { data: (data as Conversation[] | null) ?? [], error: friendlyError(error) };
 }
 
