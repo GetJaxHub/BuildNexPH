@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import type { Document } from '@/types';
 import { documentTypes, formatDate } from '@/lib/utils';
 import FileUpload from '@/components/FileUpload';
+import VerificationBadge from '@/components/admin/VerificationBadge';
 
 interface Props {
   contractorId?: string;
@@ -215,8 +216,12 @@ export default function DocumentsTab({ contractorId }: Props) {
                   <span className={`badge ${statusBadge(doc.status)}`}>
                     {statusIcon(doc.status)} {doc.status}
                   </span>
+                  <VerificationBadge status={doc.review_status} />
                 </div>
                 <p className="text-xs text-neutral-500">{doc.document_name}</p>
+                {doc.review_status === 'rejected' && doc.review_notes && (
+                  <p className="text-xs text-error-700 mt-1">Reviewer: {doc.review_notes}</p>
+                )}
                 <div className="flex flex-wrap gap-4 mt-2 text-xs text-neutral-400">
                   {doc.license_number && <span>License #: {doc.license_number}</span>}
                   {doc.issue_date && (

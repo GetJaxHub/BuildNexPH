@@ -61,6 +61,9 @@ export interface Document {
   issue_date: string | null;
   expiry_date: string | null;
   status: 'valid' | 'expired' | 'pending';
+  review_status: VerificationStatus;
+  review_notes: string;
+  reviewed_at: string | null;
   created_at: string;
 }
 

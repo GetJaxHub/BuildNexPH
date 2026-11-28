@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download, Trash2, AlertCircle, Loader2, CheckCircle2, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import ChangePasswordCard from '@/components/dashboard/ChangePasswordCard';
 import type { Contractor, Product, Document } from '@/types';
 
 export default function AccountSettingsTab() {
@@ -110,6 +111,8 @@ export default function AccountSettingsTab() {
           </button>
         )}
       </div>
+
+      <ChangePasswordCard />
 
       {/* Account Deletion */}
       <div className="card p-6 border-error-200">

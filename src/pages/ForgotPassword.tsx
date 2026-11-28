@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, Loader2, Mail, MailCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import Turnstile, { captchaEnabled } from '@/components/auth/Turnstile';
 
 /** Step 1 of password reset: email a reset link (works for contractor and buyer accounts). */
 export default function ForgotPassword() {
@@ -9,6 +10,8 @@ export default function ForgotPassword() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -16,8 +19,10 @@ export default function ForgotPassword() {
     setLoading(true);
     const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,
+      captchaToken: captcha ?? undefined,
     });
     setLoading(false);
+    setCaptchaReset((k) => k + 1);
     // Rate limits are worth showing; "no such user" is never reported by Supabase, so this doesn't leak accounts.
     if (err) return setError(err.message);
     setSent(true);
@@ -64,7 +69,8 @@ export default function ForgotPassword() {
                     className="input pl-10" placeholder="you@email.com" autoComplete="email" />
                 </div>
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full !py-3">
+              <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
+              <button type="submit" disabled={loading || (captchaEnabled && !captcha)} className="btn-primary w-full !py-3">
                 {loading ? <Loader2 size={18} className="animate-spin" /> : 'Send reset link'}
               </button>
               <p className="text-center text-sm text-neutral-500">

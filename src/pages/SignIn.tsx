@@ -4,6 +4,7 @@ import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import ResendConfirmation from '@/components/auth/ResendConfirmation';
 import RoleSwitch from '@/components/auth/RoleSwitch';
+import Turnstile, { captchaEnabled } from '@/components/auth/Turnstile';
 import type { AccountType } from '@/lib/buyer';
 
 const copy = {
@@ -22,14 +23,17 @@ export default function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setUnconfirmed(false);
     setLoading(true);
-    const result = await signIn(email, password, role);
+    const result = await signIn(email, password, role, captcha ?? undefined);
     setLoading(false);
+    setCaptchaReset((k) => k + 1);
     if (result.error) {
       setError(result.error);
       setUnconfirmed(result.unconfirmed);
@@ -100,7 +104,8 @@ export default function SignIn() {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full !py-3">
+            <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
+            <button type="submit" disabled={loading || (captchaEnabled && !captcha)} className="btn-primary w-full !py-3">
               {loading ? <Loader2 size={18} className="animate-spin" /> : role === 'buyer' ? 'Sign In as Buyer' : 'Sign In as Contractor'}
             </button>
           </form>

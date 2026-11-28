@@ -6,6 +6,7 @@ import ResendConfirmation from '@/components/auth/ResendConfirmation';
 import { philippineRegions } from '@/lib/utils';
 import RoleSwitch from '@/components/auth/RoleSwitch';
 import BuyerForm from '@/components/auth/BuyerForm';
+import Turnstile, { captchaEnabled } from '@/components/auth/Turnstile';
 import { cleanBuyer, emptyBuyer, validateBuyer, type AccountType } from '@/lib/buyer';
 
 export default function SignUp() {
@@ -28,6 +29,8 @@ export default function SignUp() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   const handleStep1 = (e: FormEvent) => {
     e.preventDefault();
@@ -36,8 +39,8 @@ export default function SignUp() {
       setError('Passwords do not match');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
     setStep(2);
@@ -58,7 +61,7 @@ export default function SignUp() {
     setLoading(true);
 
     const { error: signUpError, needsConfirmation } = role === 'buyer'
-      ? await signUpBuyer(email, password, cleanBuyer(buyer))
+      ? await signUpBuyer(email, password, cleanBuyer(buyer), captcha ?? undefined)
       : await signUp(email, password, {
         company_name: companyName,
         contact_person: contactPerson,
@@ -66,8 +69,9 @@ export default function SignUp() {
         region,
         address,
         pcab_license_no: pcabLicense,
-      });
+      }, captcha ?? undefined);
     setLoading(false);
+    setCaptchaReset((k) => k + 1);
     if (signUpError) {
       setError(signUpError);
       return;
@@ -159,7 +163,7 @@ export default function SignUp() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="input pl-10"
-                    placeholder="At least 6 characters"
+                    placeholder="At least 8 characters"
                   />
                 </div>
               </div>
@@ -292,11 +296,12 @@ export default function SignUp() {
                 </label>
               </div>
 
+              <Turnstile onToken={setCaptcha} resetKey={captchaReset} />
               <div className="flex gap-3">
                 <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1">
                   Back
                 </button>
-                <button type="submit" disabled={loading} className="btn-primary flex-1">
+                <button type="submit" disabled={loading || (captchaEnabled && !captcha)} className="btn-primary flex-1">
                   {loading ? <Loader2 size={18} className="animate-spin" /> : 'Create Account'}
                 </button>
               </div>

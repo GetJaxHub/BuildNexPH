@@ -30,19 +30,22 @@ interface AuthContextValue {
     email: string,
     password: string,
     profile: CompanySignupProfile,
+    captchaToken?: string,
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signIn: (
     email: string,
     password: string,
     as: AccountType,
+    captchaToken?: string,
   ) => Promise<{ error: string | null; unconfirmed: boolean }>;
   signUpBuyer: (
     email: string,
     password: string,
     profile: BuyerProfile,
+    captchaToken?: string,
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   updateBuyer: (profile: BuyerProfile) => Promise<{ error: string | null }>;
-  resendConfirmation: (email: string) => Promise<{ error: string | null }>;
+  resendConfirmation: (email: string, captchaToken?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshContractor: () => Promise<void>;
 }
@@ -94,21 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, profile: CompanySignupProfile) => {
+  const signUp = async (email: string, password: string, profile: CompanySignupProfile, captchaToken?: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: profile,
         emailRedirectTo: `${window.location.origin}/signin`,
+        captchaToken,
       },
     });
     if (error) return { error: error.message, needsConfirmation: false };
     return { error: null, needsConfirmation: !data.session };
   };
 
-  const signIn = async (email: string, password: string, as: AccountType) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = async (email: string, password: string, as: AccountType, captchaToken?: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if (!error) {
       const actual = accountTypeOf(data.session);
       if (actual === as) return { error: null, unconfirmed: false };
@@ -125,13 +129,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: unconfirmed ? UNCONFIRMED_EMAIL_MESSAGE : error.message, unconfirmed };
   };
 
-  const signUpBuyer = async (email: string, password: string, profile: BuyerProfile) => {
+  const signUpBuyer = async (email: string, password: string, profile: BuyerProfile, captchaToken?: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { ...profile, account_type: 'buyer' },
         emailRedirectTo: `${window.location.origin}/signin?as=buyer`,
+        captchaToken,
       },
     });
     if (error) return { error: error.message, needsConfirmation: false };
@@ -144,11 +149,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const resendConfirmation = async (email: string) => {
+  const resendConfirmation = async (email: string, captchaToken?: string) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: `${window.location.origin}/signin` },
+      options: { emailRedirectTo: `${window.location.origin}/signin`, captchaToken },
     });
     return { error: error?.message ?? null };
   };

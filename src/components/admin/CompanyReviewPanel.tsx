@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { X, Loader2, FileText, ExternalLink, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatDate } from '@/lib/utils';
@@ -21,23 +21,41 @@ export default function CompanyReviewPanel({ contractor, onClose, onSaved }: Pro
   const [saving, setSaving] = useState<VerificationStatus | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    supabase
+  const [docReasons, setDocReasons] = useState<Record<string, string>>({});
+  const [docSaving, setDocSaving] = useState<string | null>(null);
+
+  const loadDocuments = useCallback(async () => {
+    const { data, error } = await supabase
       .from('documents')
       .select('*')
       .eq('contractor_id', contractor.id)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error) setDocsError(error.message);
-        else setDocuments((data as Document[]) ?? []);
-        setDocsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+      .order('created_at', { ascending: false });
+    if (error) setDocsError(error.message);
+    else setDocuments((data as Document[]) ?? []);
+    setDocsLoading(false);
   }, [contractor.id]);
+
+  useEffect(() => { loadDocuments(); }, [loadDocuments]);
+
+  const reviewDocument = async (doc: Document, status: VerificationStatus) => {
+    const reason = (docReasons[doc.id] ?? '').trim();
+    if (status === 'rejected' && !reason) {
+      setSaveError(`Write a reason under "${doc.document_name}" before rejecting it.`);
+      return;
+    }
+    setDocSaving(doc.id);
+    setSaveError(null);
+    const { error } = await supabase.rpc('admin_review_document', {
+      p_document_id: doc.id,
+      p_status: status,
+      p_notes: status === 'rejected' ? reason : '',
+    });
+    setDocSaving(null);
+    if (error) setSaveError(error.message);
+    else await loadDocuments();
+  };
+
+  const allDocsApproved = documents.length > 0 && documents.every((d) => d.review_status === 'approved');
 
   const decide = async (status: VerificationStatus) => {
     const trimmed = notes.trim();
@@ -114,7 +132,8 @@ export default function CompanyReviewPanel({ contractor, onClose, onSaved }: Pro
             ) : (
               <ul className="space-y-3">
                 {documents.map((doc) => (
-                  <li key={doc.id} className="rounded-lg border border-neutral-200 p-4 flex items-start gap-3">
+                  <li key={doc.id} className="rounded-lg border border-neutral-200 p-4 flex flex-col gap-3">
+                    <div className="flex items-start gap-3">
                     <FileText size={18} className="text-primary-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-neutral-900 truncate">{doc.document_name}</p>
@@ -136,6 +155,37 @@ export default function CompanyReviewPanel({ contractor, onClose, onSaved }: Pro
                     ) : (
                       <span className="text-xs text-neutral-400 flex-shrink-0">No file</span>
                     )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pl-7">
+                      <VerificationBadge status={doc.review_status} />
+                      {doc.review_status === 'rejected' && doc.review_notes && (
+                        <span className="text-xs text-error-700">{doc.review_notes}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 pl-7">
+                      <input
+                        className="input !py-1.5 text-sm flex-1"
+                        placeholder="Reason (needed to reject)"
+                        maxLength={2000}
+                        aria-label={`Rejection reason for ${doc.document_name}`}
+                        value={docReasons[doc.id] ?? ''}
+                        onChange={(e) => setDocReasons((r) => ({ ...r, [doc.id]: e.target.value }))}
+                      />
+                      <button
+                        onClick={() => reviewDocument(doc, 'approved')}
+                        disabled={docSaving !== null || doc.review_status === 'approved'}
+                        className="btn-primary !py-1.5 text-sm"
+                      >
+                        {docSaving === doc.id ? <Loader2 size={14} className="animate-spin" /> : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => reviewDocument(doc, 'rejected')}
+                        disabled={docSaving !== null}
+                        className="btn !py-1.5 text-sm bg-error-600 text-white hover:bg-error-700"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -147,6 +197,13 @@ export default function CompanyReviewPanel({ contractor, onClose, onSaved }: Pro
             <p className="text-sm text-neutral-500 mb-3">
               Approving marks the company as verified. Rejecting requires a reason in the notes, which the company can see.
             </p>
+            {!docsLoading && !allDocsApproved && (
+              <p className="text-sm text-warning-700 mb-3">
+                {documents.length === 0
+                  ? 'The company can be approved once it has submitted documents.'
+                  : 'Approve every document above before approving the company.'}
+              </p>
+            )}
             <label className="label" htmlFor="review-notes">Review notes</label>
             <textarea
               id="review-notes"
@@ -168,7 +225,7 @@ export default function CompanyReviewPanel({ contractor, onClose, onSaved }: Pro
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 onClick={() => decide('approved')}
-                disabled={saving !== null}
+                disabled={saving !== null || !allDocsApproved}
                 className="btn-primary !py-2.5"
               >
                 {saving === 'approved' ? <Loader2 size={16} className="animate-spin" /> : 'Approve'}

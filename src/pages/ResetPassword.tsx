@@ -33,7 +33,7 @@ export default function ResetPassword() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (password.length < 6) return setError('Password must be at least 6 characters.');
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
     if (password !== confirm) return setError('Passwords do not match.');
     setSaving(true);
     const { data, error: err } = await supabase.auth.updateUser({ password });
@@ -83,7 +83,7 @@ export default function ResetPassword() {
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                   <input id="new-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                    className="input pl-10" placeholder="At least 6 characters" autoComplete="new-password" />
+                    className="input pl-10" placeholder="At least 8 characters" autoComplete="new-password" />
                 </div>
               </div>
               <div>

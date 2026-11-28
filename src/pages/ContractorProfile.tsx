@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { recordProfileView } from '@/lib/analytics';
 import AccreditationBadge from '@/components/AccreditationBadge';
 import ProductCard from '@/components/ProductCard';
+import VerificationBadge from '@/components/admin/VerificationBadge';
 
 export default function ContractorProfile() {
   const { id } = useParams<{ id: string }>();
@@ -141,7 +142,7 @@ export default function ContractorProfile() {
                   {contractor.address}
                 </div>
               )}
-              {contractor.website && (
+              {/^https?:\/\//i.test(contractor.website ?? '') && (
                 <a
                   href={contractor.website}
                   target="_blank"
@@ -260,6 +261,7 @@ export default function ContractorProfile() {
                         }`}>
                           {doc.status}
                         </span>
+                        <VerificationBadge status={doc.review_status} />
                       </div>
                       <p className="text-xs text-neutral-500">{doc.document_name}</p>
                       <div className="flex flex-wrap gap-4 mt-2 text-xs text-neutral-400">
